@@ -33,7 +33,12 @@ $paths = @(
   'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
   'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
 )
-Get-ItemProperty $paths -ErrorAction SilentlyContinue |
+$programs = foreach ($path in $paths) {
+  if (Test-Path $path) {
+    Get-ItemProperty $path -ErrorAction Stop
+  }
+}
+$programs |
   Where-Object DisplayName |
   Select-Object DisplayName, DisplayVersion, Publisher, InstallLocation, UninstallString, PSPath
 """

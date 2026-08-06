@@ -38,6 +38,13 @@ The `.env` file is ignored by Git. Without a key, scanning and SHA-256 hashing s
 - **Remove Selected** asks for confirmation. Files and directories are moved to `%PROGRAMDATA%\PUAInspector\Quarantine`; startup values and scheduled tasks are removed; detected services are stopped and disabled. Unsupported finding types remain manual actions.
 - Treat IOC matches as administrative leads, not proof of malware. Review publisher, business approval, and VirusTotal context before remediation.
 
+To verify admin-share access before scanning:
+
+```powershell
+Test-Path '\\TARGET-PC\C$'
+Get-ChildItem '\\TARGET-PC\C$\Users' -Force
+```
+
 ## Configuration
 
 - IOC definitions: `pua_inspector/data/known_apps.json`
@@ -59,9 +66,6 @@ Backend code lives under `pua_inspector/scanners`, `engine.py`, and the service 
 
 This application is intended for legitimate endpoint administration with authorization. Remote access and remediation depend on Windows permissions and local security policy.
 
-To verify admin-share access before scanning:
+## License
 
-```powershell
-Test-Path '\\TARGET-PC\C$'
-Get-ChildItem '\\TARGET-PC\C$\Users' -Force
-```
+PUA Inspector is available under the [MIT License](LICENSE).

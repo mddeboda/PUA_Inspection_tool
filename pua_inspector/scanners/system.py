@@ -35,7 +35,7 @@ class ScheduledTasksScanner(Scanner):
                 "manual",
             )
         script = r"""
-Get-ScheduledTask -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ScheduledTask -ErrorAction Stop | ForEach-Object {
   $task = $_
   foreach ($action in $task.Actions) {
     [PSCustomObject]@{
@@ -153,7 +153,7 @@ class ServicesScanner(Scanner):
     def scan(self, context: ScanContext) -> list[Finding]:
         reject_admin_share_mode(context, self.name)
         script = r"""
-Get-CimInstance Win32_Service -ErrorAction SilentlyContinue |
+Get-CimInstance Win32_Service -ErrorAction Stop |
   Select-Object Name, DisplayName, State, StartMode, PathName
 """
         return _match_records(
@@ -173,7 +173,7 @@ class RunningProcessesScanner(Scanner):
     def scan(self, context: ScanContext) -> list[Finding]:
         reject_admin_share_mode(context, self.name)
         script = r"""
-Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+Get-CimInstance Win32_Process -ErrorAction Stop |
   Select-Object Name, ProcessId, ExecutablePath, CommandLine
 """
         return _match_records(
@@ -194,9 +194,9 @@ class WmiPersistenceScanner(Scanner):
         reject_admin_share_mode(context, self.name)
         script = r"""
 $namespace = 'root\subscription'
-Get-CimInstance -Namespace $namespace -ClassName CommandLineEventConsumer -ErrorAction SilentlyContinue |
+Get-CimInstance -Namespace $namespace -ClassName CommandLineEventConsumer -ErrorAction Stop |
   Select-Object Name, CommandLineTemplate, ExecutablePath, @{N='Type';E={'CommandLineEventConsumer'}}
-Get-CimInstance -Namespace $namespace -ClassName ActiveScriptEventConsumer -ErrorAction SilentlyContinue |
+Get-CimInstance -Namespace $namespace -ClassName ActiveScriptEventConsumer -ErrorAction Stop |
   Select-Object Name, ScriptingEngine, ScriptText, @{N='Type';E={'ActiveScriptEventConsumer'}}
 """
         records = run_for_context(context, script)
