@@ -122,6 +122,8 @@ def test_optional_keyword_is_matched_across_scanner_metadata():
     assert len(report.findings) == 1
     assert report.findings[0].finding == "Keyword match: Needle-Agent"
     assert report.findings[0].risk == RiskLevel.LOW
+    assert report.findings[0].remediation_allowed is False
+    assert "review-only" in report.findings[0].remediation_block_reason
     assert report.search_keyword == "Needle-Agent"
 
 

@@ -26,6 +26,7 @@ def test_csv_export_includes_virustotal_fields(tmp_path):
         row = next(csv.DictReader(handle))
     assert row["vt_detection_ratio"] == "8/70"
     assert row["vt_reputation"] == "-5"
+    assert row["remediation_allowed"] == "True"
 
 
 def test_json_export_contains_findings(tmp_path):
@@ -34,4 +35,3 @@ def test_json_export_contains_findings(tmp_path):
     export_report(sample_report(), path)
 
     assert '"Wave Browser"' in path.read_text(encoding="utf-8")
-

@@ -30,6 +30,8 @@ class KnownApp:
     registry_names: tuple[str, ...]
     risk_level: RiskLevel
     recommended_action: str
+    remediation_allowed: bool = True
+    remediation_block_reason: str = ""
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "KnownApp":
@@ -40,6 +42,8 @@ class KnownApp:
             registry_names=tuple(data.get("registry_names", [])),
             risk_level=RiskLevel(data.get("risk_level", "Medium")),
             recommended_action=data.get("recommended_action", "Review and remove if unauthorized."),
+            remediation_allowed=bool(data.get("remediation_allowed", True)),
+            remediation_block_reason=data.get("remediation_block_reason", ""),
         )
 
     @property
@@ -66,6 +70,8 @@ class Finding:
     risk: RiskLevel
     status: FindingStatus = FindingStatus.DETECTED
     action: str = "Review"
+    remediation_allowed: bool = True
+    remediation_block_reason: str = ""
     executable: str = ""
     sha256: str = ""
     virustotal: VirusTotalResult | None = None

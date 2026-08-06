@@ -134,4 +134,6 @@ def _keyword_indicator(keyword: str) -> KnownApp:
         recommended_action=(
             "Review the matched artifact. A custom keyword match is not inherently malicious."
         ),
+        remediation_allowed=False,
+        remediation_block_reason="Custom keyword matches are review-only and cannot be remediated.",
     )

@@ -14,6 +14,11 @@ class RemediationService:
         self.settings = settings
 
     def remediate(self, finding: Finding) -> tuple[bool, str]:
+        if not finding.remediation_allowed:
+            return False, (
+                finding.remediation_block_reason
+                or "Remediation is blocked by the finding safety policy."
+            )
         handlers = {
             "quarantine_path": self._quarantine_path,
             "registry_value": self._remove_registry_value,
@@ -98,4 +103,3 @@ class RemediationService:
 
 def _ps_quote(value: str) -> str:
     return value.replace("'", "''").strip()
-

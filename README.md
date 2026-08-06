@@ -28,6 +28,8 @@ The `.env` file is ignored by Git. Without a key, scanning and SHA-256 hashing s
 
 - Enter an optional value in **Keyword (optional)** to add a temporary, case-insensitive search term for the current scan. It checks the names, paths, commands, registry/task metadata, hosts entries, shortcuts, and extension metadata already collected by the selected modules; it does not search arbitrary file contents.
 - Custom matches appear as `Keyword match: VALUE` with Low risk and a review-only recommendation. The keyword is included in JSON exports but is not saved to `known_apps.json`.
+- Custom keyword matches are non-remediable. The backend and GUI both block quarantine or removal actions for them.
+- **What's New** loads the five most recent Git commits in the background when the application starts. Packaged copies without Git history show an unavailable-history message.
 - Leave **Admin Share / SMB scan mode** unchecked for a local scan or a remote WinRM scan.
 - For a remote file scan without WinRM, enter the target hostname and select **Admin Share / SMB scan mode**. The app uses `\\HOSTNAME\C$` with the current Windows credentials; it does not request or store an SMB password.
 - SMB mode scans AppData, ProgramData, Chrome/Edge extensions, startup folders, browser shortcuts, the hosts file, and known directories under Program Files. Executable hashing and VirusTotal enrichment work across the share.

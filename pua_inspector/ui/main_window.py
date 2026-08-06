@@ -8,6 +8,7 @@ import webbrowser
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
+from pua_inspector.changelog import RecentChange, format_recent_changes, load_recent_changes
 from pua_inspector.config import AppSettings, save_settings
 from pua_inspector.engine import ScanEngine
 from pua_inspector.exporter import export_report
@@ -23,6 +24,8 @@ class MainWindow(tk.Tk):
         self.remediation = RemediationService(settings)
         self.report: ScanReport | None = None
         self.last_scan_admin_share_mode = False
+        self.recent_changes: list[RecentChange] = []
+        self.changelog_status = "Loading recent changes..."
         self.findings_by_item: dict[str, Finding] = {}
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
         self.module_variables: dict[str, tk.BooleanVar] = {}
@@ -34,6 +37,7 @@ class MainWindow(tk.Tk):
         self._configure_style()
         self._build_ui()
         self.after(100, self._drain_events)
+        threading.Thread(target=self._load_changelog_worker, daemon=True).start()
 
     def _configure_style(self) -> None:
         style = ttk.Style(self)
@@ -91,8 +95,11 @@ class MainWindow(tk.Tk):
         ttk.Button(controls, text="Export Results", command=self._export).grid(
             row=0, column=4, padx=4
         )
-        ttk.Button(controls, text="Settings", command=self._open_settings).grid(
+        ttk.Button(controls, text="What's New", command=self._show_whats_new).grid(
             row=0, column=5, padx=(4, 0)
+        )
+        ttk.Button(controls, text="Settings", command=self._open_settings).grid(
+            row=1, column=5, padx=(4, 0), pady=(6, 0)
         )
 
         modules_frame = ttk.LabelFrame(shell, text="Scan modules", padding=10)
@@ -217,9 +224,28 @@ class MainWindow(tk.Tk):
                     self.scan_button.configure(state="normal")
                     self.progress_label.configure(text="Scan failed")
                     messagebox.showerror("Scan failed", str(payload))
+                elif event == "changelog":
+                    self.recent_changes = payload
+                    self.changelog_status = ""
+                elif event == "changelog_error":
+                    self.changelog_status = str(payload)
         except queue.Empty:
             pass
         self.after(100, self._drain_events)
+
+    def _load_changelog_worker(self) -> None:
+        try:
+            self.events.put(("changelog", load_recent_changes(limit=5)))
+        except (OSError, RuntimeError, ValueError) as error:
+            self.events.put(("changelog_error", str(error)))
+
+    def _show_whats_new(self) -> None:
+        message = (
+            format_recent_changes(self.recent_changes)
+            if self.recent_changes
+            else self.changelog_status or "No Git changes are available."
+        )
+        messagebox.showinfo("What's New — Last 5 Changes", message)
 
     def _scan_complete(self, report: ScanReport) -> None:
         self.report = report
@@ -266,12 +292,37 @@ class MainWindow(tk.Tk):
                 "This release only performs remediation on the local endpoint.",
             )
             return
+        eligible = [
+            item for item in selected if self.findings_by_item[item].remediation_allowed
+        ]
+        blocked = [item for item in selected if item not in eligible]
+        if not eligible:
+            reasons = {
+                self.findings_by_item[item].remediation_block_reason
+                or "Remediation is blocked by policy."
+                for item in blocked
+            }
+            messagebox.showwarning(
+                "Remediation blocked",
+                "\n".join(sorted(reasons)),
+            )
+            return
+        confirmation = (
+            "Remediate the eligible selected findings? Files are moved to quarantine."
+        )
+        if blocked:
+            confirmation += f" {len(blocked)} policy-blocked finding(s) will be skipped."
         if not messagebox.askyesno(
             "Confirm remediation",
-            "Remediate the selected findings? Files are moved to quarantine; some findings require manual action.",
+            confirmation,
         ):
             return
-        for item in selected:
+        for item in blocked:
+            finding = self.findings_by_item[item]
+            self._write_log(
+                f"Skipped {finding.finding}: {finding.remediation_block_reason}"
+            )
+        for item in eligible:
             finding = self.findings_by_item[item]
             success, message = self.remediation.remediate(finding)
             values = list(self.results.item(item, "values"))
@@ -319,7 +370,10 @@ class MainWindow(tk.Tk):
             f"Location: {finding.location}",
             f"Executable: {finding.executable or 'N/A'}",
             f"SHA-256: {finding.sha256 or 'N/A'}",
+            f"Remediation allowed: {'Yes' if finding.remediation_allowed else 'No'}",
         ]
+        if finding.remediation_block_reason:
+            lines.append(f"Remediation policy: {finding.remediation_block_reason}")
         if finding.virustotal:
             vt = finding.virustotal
             lines.extend(

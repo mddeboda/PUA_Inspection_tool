@@ -78,6 +78,8 @@ def finding_for_app(
         risk=app.risk_level,
         status=FindingStatus.DETECTED,
         action=app.recommended_action,
+        remediation_allowed=app.remediation_allowed,
+        remediation_block_reason=app.remediation_block_reason,
         executable=executable,
         remediation_type=remediation_type,
         remediation_data=remediation_data or {},
