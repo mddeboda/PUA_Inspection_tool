@@ -104,12 +104,24 @@ class MainWindow(tk.Tk):
 
         modules_frame = ttk.LabelFrame(shell, text="Scan modules", padding=10)
         modules_frame.grid(row=2, column=0, sticky="nsew", padx=(0, 12))
+        module_buttons = ttk.Frame(modules_frame)
+        module_buttons.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        ttk.Button(
+            module_buttons,
+            text="Select All",
+            command=lambda: self._set_all_modules(True),
+        ).pack(side=tk.LEFT, padx=(0, 4))
+        ttk.Button(
+            module_buttons,
+            text="Unselect All",
+            command=lambda: self._set_all_modules(False),
+        ).pack(side=tk.LEFT)
         enabled = set(self.settings.enabled_modules or self.engine.module_names)
         for row, module_name in enumerate(self.engine.module_names):
             variable = tk.BooleanVar(value=module_name in enabled)
             self.module_variables[module_name] = variable
             ttk.Checkbutton(modules_frame, text=module_name, variable=variable).grid(
-                row=row, column=0, sticky="w", pady=2
+                row=row + 1, column=0, sticky="w", pady=2
             )
 
         results_frame = ttk.Frame(shell)
@@ -186,6 +198,10 @@ class MainWindow(tk.Tk):
             daemon=True,
         )
         thread.start()
+
+    def _set_all_modules(self, selected: bool) -> None:
+        for variable in self.module_variables.values():
+            variable.set(selected)
 
     def _scan_worker(
         self,
