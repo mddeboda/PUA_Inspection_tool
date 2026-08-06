@@ -30,14 +30,15 @@ The `.env` file is ignored by Git. Without a key, scanning and SHA-256 hashing s
 - Custom matches appear as `Keyword match: VALUE` with Low risk and a review-only recommendation. The keyword is included in JSON exports but is not saved to `known_apps.json`.
 - Custom keyword matches are non-remediable. The backend and GUI both block quarantine or removal actions for them.
 - **What's New** loads the five most recent Git commits in the background when the application starts. Packaged copies without Git history show an unavailable-history message.
+- The **Scheduled Task Inventory** tab uses a fast non-verbose summary query, hides Microsoft Windows, disabled, and empty task entries by default, supports filtering and sortable columns, and loads verbose details only when a row is selected. The empty-task filter only removes rows with no meaningful status, schedule, action, or descriptive metadata. Right-click a task to view a plain-language detail window, enable or disable it, or permanently delete its task definition. Microsoft tasks under `\Microsoft\Windows` are protected from changes, and deletion always requires confirmation. A slower verbose-initial-query option is available. Local queries omit `/s`; remote targets use the current Windows identity with `/s HOSTNAME`.
 - Leave **Admin Share / SMB scan mode** unchecked for a local scan or a remote WinRM scan.
 - For a remote file scan without WinRM, enter the target hostname and select **Admin Share / SMB scan mode**. The app uses `\\HOSTNAME\C$` with the current Windows credentials; it does not request or store an SMB password.
 - SMB mode scans AppData, ProgramData, Chrome/Edge extensions, startup folders, browser shortcuts, the hosts file, and known directories under Program Files. Executable hashing and VirusTotal enrichment work across the share.
 - Scheduled Tasks uses `schtasks.exe /query /s HOSTNAME /fo CSV /v` in SMB mode. This uses the remote Task Scheduler RPC service and the current Windows identity; no username or password is requested or stored.
 - Installed Programs is a filesystem approximation in SMB mode. Run/RunOnce registry values, services, WMI persistence, and running processes require WinRM or another management channel and are logged as unavailable.
-- SMB mode is read-only. **Remove Selected** is blocked for all SMB results.
+- SMB scan results are read-only. **Remediate Selected** is blocked for all SMB findings.
 - Double-click the finding details panel to open an available VirusTotal report.
-- **Remove Selected** asks for confirmation. Files and directories are moved to `%PROGRAMDATA%\PUAInspector\Quarantine`; startup values and scheduled tasks are removed; detected services are stopped and disabled. Unsupported finding types remain manual actions.
+- **Remediate Selected** asks for confirmation. Files and directories are moved to `%PROGRAMDATA%\PUAInspector\Quarantine`; startup values and scheduled tasks are removed; detected services are stopped and disabled. Unsupported finding types remain manual actions.
 - Treat IOC matches as administrative leads, not proof of malware. Review publisher, business approval, and VirusTotal context before remediation.
 
 To verify admin-share access before scanning:

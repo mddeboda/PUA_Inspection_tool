@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import socket
 import subprocess
 from pathlib import Path
 from typing import Any
+
+
+def validate_hostname(hostname: str) -> str:
+    value = hostname.strip() or socket.gethostname()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,255}", value):
+        raise ValueError("Hostname contains unsupported characters")
+    return value
 
 
 def sha256_file(path: Path, chunk_size: int = 1024 * 1024) -> str:

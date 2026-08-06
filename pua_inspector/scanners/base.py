@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import re
 import socket
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -9,7 +8,7 @@ from pathlib import Path
 
 from pua_inspector.config import AppSettings
 from pua_inspector.models import Finding, FindingStatus, KnownApp, RiskLevel
-from pua_inspector.utils import extract_executable
+from pua_inspector.utils import extract_executable, validate_hostname
 
 
 @dataclass(frozen=True)
@@ -110,13 +109,6 @@ def finding_from_record(
         remediation_data=record,
         details=record,
     )
-
-
-def validate_hostname(hostname: str) -> str:
-    value = hostname.strip() or socket.gethostname()
-    if not re.fullmatch(r"[A-Za-z0-9_.-]{1,255}", value):
-        raise ValueError("Hostname contains unsupported characters")
-    return value
 
 
 def local_directory_candidates(environment_names: tuple[str, ...]) -> list[Path]:

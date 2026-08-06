@@ -9,9 +9,16 @@ from pua_inspector.scanners.filesystem import scan_known_directories
 from pua_inspector.scanners.registry import RegistryRunKeysScanner
 from pua_inspector.scanners.system import (
     ScheduledTasksScanner,
-    _parse_schtasks_csv,
-    _query_scheduled_tasks,
     _read_hosts_file,
+)
+from pua_inspector.task_inventory import (
+    ScheduledTaskRecord,
+    delete_scheduled_task,
+    parse_scheduled_tasks_csv,
+    query_scheduled_tasks,
+    query_task_details,
+    query_task_summaries,
+    set_task_enabled,
 )
 
 
@@ -68,19 +75,45 @@ def test_schtasks_csv_parser_extracts_remote_task_action():
         '"N/A","0","Vendor","C:\\OneStart.ai\\update.exe --silent","","Updater"\n'
     )
 
-    records = _parse_schtasks_csv(output)
+    records = parse_scheduled_tasks_csv(output)
 
     assert records == [
-        {
-            "HostName": "REMOTE-PC",
-            "TaskName": "\\OneStart Update",
-            "Status": "Ready",
-            "Execute": "C:\\OneStart.ai\\update.exe --silent",
-            "Author": "Vendor",
-            "Comment": "Updater",
-            "Source": "schtasks /query",
-        }
+        ScheduledTaskRecord(
+            hostname="REMOTE-PC",
+            task_name="\\OneStart Update",
+            next_run_time="N/A",
+            status="Ready",
+            last_run_time="N/A",
+            last_result="0",
+            author="Vendor",
+            action="C:\\OneStart.ai\\update.exe --silent",
+            comment="Updater",
+        )
     ]
+
+
+def test_schtasks_csv_parser_skips_repeated_verbose_headers():
+    header = (
+        '"HostName","TaskName","Next Run Time","Status","Logon Mode",'
+        '"Last Run Time","Last Result","Author","Task To Run"\n'
+    )
+    output = (
+        header
+        + '"HOST","\\First Task","N/A","Ready","Interactive",'
+        '"N/A","0","Vendor","first.exe"\n'
+        + header
+        + header
+        + '"HOST","\\Second Task","N/A","Ready","Interactive",'
+        '"N/A","0","Vendor","second.exe"\n'
+    )
+
+    records = parse_scheduled_tasks_csv(output)
+
+    assert [record.task_name for record in records] == [
+        "\\First Task",
+        "\\Second Task",
+    ]
+    assert all(record.hostname == "HOST" for record in records)
 
 
 def test_schtasks_query_uses_current_windows_identity():
@@ -90,8 +123,8 @@ def test_schtasks_query_uses_current_windows_identity():
         stderr="",
     )
 
-    with patch("pua_inspector.scanners.system.subprocess.run", return_value=completed) as run:
-        _query_scheduled_tasks("REMOTE-PC")
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        query_scheduled_tasks("REMOTE-PC", remote=True)
 
     command = run.call_args.args[0]
     assert command == [
@@ -107,6 +140,142 @@ def test_schtasks_query_uses_current_windows_identity():
     assert "/p" not in command
 
 
+def test_local_task_query_does_not_use_remote_switch():
+    completed = SimpleNamespace(
+        returncode=0,
+        stdout='"HostName","TaskName","Next Run Time","Status","Logon Mode"\n',
+        stderr="",
+    )
+
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        query_scheduled_tasks("localhost", remote=False)
+
+    assert run.call_args.args[0] == [
+        "schtasks.exe",
+        "/query",
+        "/fo",
+        "CSV",
+        "/v",
+    ]
+
+
+def test_fast_task_summary_query_omits_verbose_switch():
+    completed = SimpleNamespace(
+        returncode=0,
+        stdout='"HostName","TaskName","Next Run Time","Status","Logon Mode"\n',
+        stderr="",
+    )
+
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        query_task_summaries("REMOTE-PC", remote=True)
+
+    assert run.call_args.args[0] == [
+        "schtasks.exe",
+        "/query",
+        "/s",
+        "REMOTE-PC",
+        "/fo",
+        "CSV",
+    ]
+
+
+def test_task_detail_query_targets_only_selected_task():
+    completed = SimpleNamespace(
+        returncode=0,
+        stdout=(
+            '"HostName","TaskName","Next Run Time","Status","Logon Mode",'
+            '"Last Run Time","Last Result","Author","Task To Run"\n'
+            '"REMOTE-PC","\\Test Task","N/A","Ready","Interactive",'
+            '"N/A","0","Test","test.exe"\n'
+        ),
+        stderr="",
+    )
+
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        task = query_task_details("REMOTE-PC", "\\Test Task", remote=True)
+
+    assert run.call_args.args[0] == [
+        "schtasks.exe",
+        "/query",
+        "/s",
+        "REMOTE-PC",
+        "/tn",
+        "\\Test Task",
+        "/fo",
+        "CSV",
+        "/v",
+    ]
+    assert task.action == "test.exe"
+
+
+def test_task_noise_filter_properties():
+    microsoft = ScheduledTaskRecord(
+        "HOST", "\\Microsoft\\Windows\\Defrag\\ScheduledDefrag"
+    )
+    disabled = ScheduledTaskRecord("HOST", "\\Vendor\\Updater", status="Disabled")
+    empty = ScheduledTaskRecord("HOST", "\\Vendor\\Incomplete", next_run_time="N/A")
+    active = ScheduledTaskRecord("HOST", "\\Vendor\\Active", status="Ready")
+
+    assert microsoft.is_microsoft_windows_task is True
+    assert disabled.is_disabled is True
+    assert empty.is_empty is True
+    assert active.is_empty is False
+
+
+@pytest.mark.parametrize(
+    ("enabled", "switch"),
+    ((True, "/enable"), (False, "/disable")),
+)
+def test_remote_task_state_change_uses_current_identity(enabled, switch):
+    completed = SimpleNamespace(returncode=0, stdout="SUCCESS", stderr="")
+
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        result = set_task_enabled(
+            "REMOTE-PC", "\\Vendor\\Updater", enabled=enabled, remote=True
+        )
+
+    assert run.call_args.args[0] == [
+        "schtasks.exe",
+        "/change",
+        "/s",
+        "REMOTE-PC",
+        "/tn",
+        "\\Vendor\\Updater",
+        switch,
+    ]
+    assert "/u" not in run.call_args.args[0]
+    assert "/p" not in run.call_args.args[0]
+    assert result == "SUCCESS"
+
+
+def test_remote_task_delete_is_forced_after_ui_confirmation():
+    completed = SimpleNamespace(returncode=0, stdout="SUCCESS", stderr="")
+
+    with patch("pua_inspector.task_inventory.subprocess.run", return_value=completed) as run:
+        delete_scheduled_task(
+            "REMOTE-PC", "\\Vendor\\Updater", remote=True
+        )
+
+    assert run.call_args.args[0] == [
+        "schtasks.exe",
+        "/delete",
+        "/s",
+        "REMOTE-PC",
+        "/tn",
+        "\\Vendor\\Updater",
+        "/f",
+    ]
+
+
+def test_backend_blocks_changes_to_microsoft_system_tasks():
+    with pytest.raises(ValueError, match="protected from changes"):
+        delete_scheduled_task(
+            "localhost",
+            "\\Microsoft\\Windows\\Defrag\\ScheduledDefrag",
+            remote=False,
+        )
+
+
 def test_smb_scheduled_task_scanner_matches_ioc():
     context = ScanContext(
         "REMOTE-PC",
@@ -115,18 +284,17 @@ def test_smb_scheduled_task_scanner_matches_ioc():
         admin_share_mode=True,
     )
     records = [
-        {
-            "HostName": "REMOTE-PC",
-            "TaskName": "\\OneStart.ai Update",
-            "Status": "Ready",
-            "Execute": "C:\\ProgramData\\OneStart.ai\\update.exe --silent",
-            "Author": "Test",
-            "Comment": "Benign test record",
-            "Source": "schtasks /query",
-        }
+        ScheduledTaskRecord(
+            hostname="REMOTE-PC",
+            task_name="\\OneStart.ai Update",
+            status="Ready",
+            action="C:\\ProgramData\\OneStart.ai\\update.exe --silent",
+            author="Test",
+            comment="Benign test record",
+        )
     ]
 
-    with patch("pua_inspector.scanners.system._query_scheduled_tasks", return_value=records):
+    with patch("pua_inspector.scanners.system.query_scheduled_tasks", return_value=records):
         findings = ScheduledTasksScanner().scan(context)
 
     assert len(findings) == 1

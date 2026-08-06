@@ -1,9 +1,5 @@
 from __future__ import annotations
 
-import csv
-import io
-import locale
-import subprocess
 from pathlib import Path
 
 from pua_inspector.models import Finding
@@ -15,9 +11,9 @@ from pua_inspector.scanners.base import (
     finding_from_record,
     reject_admin_share_mode,
     review_finding,
-    validate_hostname,
 )
 from pua_inspector.scanners.powershell import run_for_context
+from pua_inspector.task_inventory import query_scheduled_tasks
 
 
 class ScheduledTasksScanner(Scanner):
@@ -25,10 +21,14 @@ class ScheduledTasksScanner(Scanner):
 
     def scan(self, context: ScanContext) -> list[Finding]:
         if context.admin_share_mode:
+            records = [
+                task.to_scan_record()
+                for task in query_scheduled_tasks(context.hostname, remote=True)
+            ]
             return _match_records(
                 context,
                 self.name,
-                _query_scheduled_tasks(context.hostname),
+                records,
                 ("TaskName", "Execute", "Status", "Author", "Comment"),
                 "TaskName",
                 "Execute",
@@ -55,98 +55,6 @@ Get-ScheduledTask -ErrorAction Stop | ForEach-Object {
             "Execute",
             "scheduled_task",
         )
-
-
-def _query_scheduled_tasks(hostname: str, timeout_seconds: int = 60) -> list[dict]:
-    target = validate_hostname(hostname)
-    command = [
-        "schtasks.exe",
-        "/query",
-        "/s",
-        target,
-        "/fo",
-        "CSV",
-        "/v",
-    ]
-    try:
-        completed = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            encoding=locale.getpreferredencoding(False),
-            errors="replace",
-            timeout=timeout_seconds,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-            check=False,
-        )
-    except FileNotFoundError as error:
-        raise RuntimeError("schtasks.exe is not available on this system") from error
-    except subprocess.TimeoutExpired as error:
-        raise RuntimeError(
-            f"Remote scheduled-task query timed out after {timeout_seconds} seconds"
-        ) from error
-    if completed.returncode != 0:
-        message = completed.stderr.strip() or completed.stdout.strip()
-        raise RuntimeError(message or "Remote schtasks query failed")
-    return _parse_schtasks_csv(completed.stdout)
-
-
-def _parse_schtasks_csv(output: str) -> list[dict]:
-    rows = list(csv.reader(io.StringIO(output.lstrip("\ufeff"))))
-    header_index = next((index for index, row in enumerate(rows) if len(row) >= 5), None)
-    if header_index is None:
-        return []
-
-    headers = rows[header_index]
-    canonical_headers = [_canonical_header(header) for header in headers]
-    records = []
-    for values in rows[header_index + 1 :]:
-        if not values or not any(value.strip() for value in values):
-            continue
-        padded_values = values + [""] * max(0, len(headers) - len(values))
-        row = dict(zip(canonical_headers, padded_values, strict=False))
-        task_name = _field_or_position(row, padded_values, ("taskname",), 1)
-        if not task_name:
-            continue
-        records.append(
-            {
-                "HostName": _field_or_position(row, padded_values, ("hostname",), 0),
-                "TaskName": task_name,
-                "Status": _field_or_position(row, padded_values, ("status",), 3),
-                "Execute": _field_or_position(
-                    row,
-                    padded_values,
-                    ("tasktorun", "action", "actions"),
-                    8,
-                ),
-                "Author": _field_or_position(row, padded_values, ("author",), 7),
-                "Comment": _field_or_position(
-                    row, padded_values, ("comment", "description"), 10
-                ),
-                "Source": "schtasks /query",
-            }
-        )
-    return records
-
-
-def _canonical_header(value: str) -> str:
-    return "".join(character for character in value.casefold() if character.isalnum())
-
-
-def _field_or_position(
-    row: dict[str, str],
-    values: list[str],
-    field_names: tuple[str, ...],
-    fallback_index: int,
-) -> str:
-    for field_name in field_names:
-        if value := row.get(field_name):
-            return value.strip()
-    if fallback_index < len(values):
-        return values[fallback_index].strip()
-    return ""
-
-
 class ServicesScanner(Scanner):
     name = "Windows Services"
 
