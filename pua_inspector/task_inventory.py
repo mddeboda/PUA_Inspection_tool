@@ -231,17 +231,23 @@ def _run_schtasks_query(
     if completed.returncode != 0:
         message = completed.stderr.strip() or completed.stdout.strip()
         raise RuntimeError(message or "Scheduled-task query failed")
-    return parse_scheduled_tasks_csv(completed.stdout)
+    return parse_scheduled_tasks_csv(completed.stdout, default_hostname=target)
 
 
-def parse_scheduled_tasks_csv(output: str) -> list[ScheduledTaskRecord]:
+def parse_scheduled_tasks_csv(
+    output: str, *, default_hostname: str = ""
+) -> list[ScheduledTaskRecord]:
     rows = list(csv.reader(io.StringIO(output.lstrip("\ufeff"))))
-    header_index = next((index for index, row in enumerate(rows) if len(row) >= 5), None)
+    header_index = next((index for index, row in enumerate(rows) if len(row) >= 3), None)
     if header_index is None:
         return []
 
     headers = rows[header_index]
     canonical_headers = [_canonical_header(header) for header in headers]
+    has_hostname_column = "hostname" in canonical_headers
+    task_name_index = 1 if has_hostname_column else 0
+    next_run_index = 2 if has_hostname_column else 1
+    status_index = 3 if has_hostname_column else 2
     records = []
     for values in rows[header_index + 1 :]:
         if not values or not any(value.strip() for value in values):
@@ -253,17 +259,21 @@ def parse_scheduled_tasks_csv(output: str) -> list[ScheduledTaskRecord]:
         if normalized_values == canonical_headers:
             continue
         row = dict(zip(canonical_headers, padded_values, strict=False))
-        task_name = _field_or_position(row, padded_values, ("taskname",), 1)
+        task_name = _field_or_position(
+            row, padded_values, ("taskname",), task_name_index
+        )
         if not task_name:
             continue
         records.append(
             ScheduledTaskRecord(
-                hostname=_field_or_position(row, padded_values, ("hostname",), 0),
+                hostname=(row.get("hostname") or default_hostname).strip(),
                 task_name=task_name,
                 next_run_time=_field_or_position(
-                    row, padded_values, ("nextruntime",), 2
+                    row, padded_values, ("nextruntime",), next_run_index
                 ),
-                status=_field_or_position(row, padded_values, ("status",), 3),
+                status=_field_or_position(
+                    row, padded_values, ("status",), status_index
+                ),
                 last_run_time=_field_or_position(
                     row, padded_values, ("lastruntime",), 5
                 ),

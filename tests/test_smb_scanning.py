@@ -116,6 +116,33 @@ def test_schtasks_csv_parser_skips_repeated_verbose_headers():
     assert all(record.hostname == "HOST" for record in records)
 
 
+def test_schtasks_csv_parser_supports_fast_three_column_output():
+    header = '"TaskName","Next Run Time","Status"\n'
+    output = (
+        header
+        + '"\\Vendor\\Updater","8/7/2026 9:00:00 AM","Ready"\n'
+        + header
+        + '"\\Vendor\\Cleanup","N/A","Disabled"\n'
+    )
+
+    records = parse_scheduled_tasks_csv(output, default_hostname="WORKSTATION-1")
+
+    assert records == [
+        ScheduledTaskRecord(
+            hostname="WORKSTATION-1",
+            task_name="\\Vendor\\Updater",
+            next_run_time="8/7/2026 9:00:00 AM",
+            status="Ready",
+        ),
+        ScheduledTaskRecord(
+            hostname="WORKSTATION-1",
+            task_name="\\Vendor\\Cleanup",
+            next_run_time="N/A",
+            status="Disabled",
+        ),
+    ]
+
+
 def test_schtasks_query_uses_current_windows_identity():
     completed = SimpleNamespace(
         returncode=0,

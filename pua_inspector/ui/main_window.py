@@ -44,6 +44,7 @@ class MainWindow(tk.Tk):
         self.task_query_remote = False
         self.task_query_verbose = False
         self.task_query_generation = 0
+        self.task_inventory_load_started = False
         self.task_action_in_progress = False
         self.task_detail_windows: dict[tuple[str, str], tuple[tk.Toplevel, tk.Text]] = {}
         self.findings_by_item: dict[str, Finding] = {}
@@ -80,6 +81,7 @@ class MainWindow(tk.Tk):
         self.notebook.add(self.task_inventory_tab, text="Scheduled Task Inventory")
         self._build_scanner_tab(scanner_tab)
         self._build_task_inventory_tab(self.task_inventory_tab)
+        self.notebook.bind("<<NotebookTabChanged>>", self._on_notebook_tab_changed)
 
     def _build_scanner_tab(self, parent: ttk.Frame) -> None:
         shell = ttk.Frame(parent, padding=18)
@@ -366,7 +368,17 @@ class MainWindow(tk.Tk):
         for variable in self.module_variables.values():
             variable.set(selected)
 
+    def _on_notebook_tab_changed(self, _event=None) -> None:
+        if self.notebook.select() != str(self.task_inventory_tab):
+            return
+        self.after_idle(self._start_initial_task_query)
+
+    def _start_initial_task_query(self) -> None:
+        if not self.task_inventory_load_started:
+            self._start_task_query()
+
     def _start_task_query(self) -> None:
+        self.task_inventory_load_started = True
         target = self.task_hostname.get().strip() or socket.gethostname()
         local_names = {
             ".",
