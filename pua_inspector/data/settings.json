@@ -1,0 +1,21 @@
+{
+  "enabled_modules": [
+    "Installed Programs",
+    "Scheduled Tasks",
+    "Registry Run/RunOnce Keys",
+    "Startup Folders",
+    "Windows Services",
+    "AppData (Local, LocalLow, Roaming)",
+    "ProgramData",
+    "Browser Shortcuts",
+    "Browser Extensions (Chrome/Edge)",
+    "Hosts File",
+    "WMI Persistence",
+    "Running Processes"
+  ],
+  "virustotal_enabled": true,
+  "virustotal_timeout_seconds": 15,
+  "scan_path_depth": 3,
+  "max_files_per_location": 5000,
+  "quarantine_directory": "%PROGRAMDATA%\\PUAInspector\\Quarantine"
+}

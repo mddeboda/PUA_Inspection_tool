@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pua-inspection-tool"
+version = "0.1.0"
+description = "Lightweight Windows endpoint hygiene and PUA scanner"
+requires-python = ">=3.10"
+dependencies = [
+    "psutil>=5.9,<7",
+    "python-dotenv>=1.0,<2",
+    "requests>=2.31,<3",
+]
+
+[project.gui-scripts]
+pua-inspector = "pua_inspector.app:main"
+
+[tool.setuptools.packages.find]
+include = ["pua_inspector*"]
+
+[tool.setuptools.package-data]
+pua_inspector = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

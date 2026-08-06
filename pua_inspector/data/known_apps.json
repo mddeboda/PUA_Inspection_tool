@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "known_apps": [
+    {
+      "name": "OneStart.ai",
+      "aliases": ["OneStart", "OneStart Browser", "OneStartBar"],
+      "known_install_paths": ["%LOCALAPPDATA%\\OneStart.ai", "%APPDATA%\\OneStart"],
+      "registry_names": ["OneStart.ai", "OneStartBar"],
+      "risk_level": "High",
+      "recommended_action": "Uninstall and quarantine remaining files if the software is not explicitly authorized."
+    },
+    {
+      "name": "Shift Browser",
+      "aliases": ["Shift Browser", "Shift Technologies Inc."],
+      "known_install_paths": ["%LOCALAPPDATA%\\Shift", "%APPDATA%\\Shift"],
+      "registry_names": ["Shift Browser", "Shift Technologies"],
+      "risk_level": "Medium",
+      "recommended_action": "Verify business approval; uninstall if unapproved."
+    },
+    {
+      "name": "Wave Browser",
+      "aliases": ["WaveBrowser", "Wave Browser Applications"],
+      "known_install_paths": ["%LOCALAPPDATA%\\WaveBrowser", "%PROGRAMFILES%\\Wave Browser"],
+      "registry_names": ["WaveBrowser", "Wave Browser"],
+      "risk_level": "High",
+      "recommended_action": "Uninstall, remove persistence, and quarantine residual files."
+    },
+    {
+      "name": "WebDiscover Browser",
+      "aliases": ["WebDiscover", "WebDiscoverBrowser"],
+      "known_install_paths": ["%LOCALAPPDATA%\\WebDiscoverBrowser"],
+      "registry_names": ["WebDiscover Browser", "WebDiscoverBrowser"],
+      "risk_level": "High",
+      "recommended_action": "Uninstall and remove related startup entries and scheduled tasks."
+    },
+    {
+      "name": "RAV Endpoint Protection",
+      "aliases": ["RAV Antivirus", "ReasonLabs", "Reason Security"],
+      "known_install_paths": ["%PROGRAMFILES%\\RAVAntivirus", "%PROGRAMFILES%\\ReasonLabs"],
+      "registry_names": ["RAV Endpoint Protection", "RAV Antivirus", "ReasonLabs"],
+      "risk_level": "Medium",
+      "recommended_action": "Confirm it is approved security software; uninstall it if it was installed without authorization."
+    },
+    {
+      "name": "PC App Store",
+      "aliases": ["PCAppStore", "PC AppStore"],
+      "known_install_paths": ["%LOCALAPPDATA%\\PCAppStore", "%PROGRAMFILES%\\PC App Store"],
+      "registry_names": ["PC App Store", "PCAppStore"],
+      "risk_level": "High",
+      "recommended_action": "Uninstall and quarantine remaining application directories."
+    },
+    {
+      "name": "PremierOpinion",
+      "aliases": ["Premier Opinion", "VoiceFive"],
+      "known_install_paths": ["%PROGRAMFILES%\\PremierOpinion", "%PROGRAMDATA%\\PremierOpinion"],
+      "registry_names": ["PremierOpinion", "Premier Opinion"],
+      "risk_level": "High",
+      "recommended_action": "Remove the application and its services or browser components."
+    },
+    {
+      "name": "RelevantKnowledge",
+      "aliases": ["Relevant Knowledge", "rlvknlg"],
+      "known_install_paths": ["%PROGRAMFILES%\\RelevantKnowledge", "%PROGRAMDATA%\\RelevantKnowledge"],
+      "registry_names": ["RelevantKnowledge", "Relevant Knowledge"],
+      "risk_level": "High",
+      "recommended_action": "Remove the application, services, and persistence after confirming policy."
+    },
+    {
+      "name": "Search Protect",
+      "aliases": ["SearchProtect", "Conduit Search Protect", "Client Connect"],
+      "known_install_paths": ["%PROGRAMFILES%\\SearchProtect", "%LOCALAPPDATA%\\SearchProtect"],
+      "registry_names": ["SearchProtect", "Search Protect by Conduit"],
+      "risk_level": "High",
+      "recommended_action": "Uninstall and restore affected browser search and shortcut settings."
+    },
+    {
+      "name": "Ask Toolbar",
+      "aliases": ["Ask.com Toolbar", "AskBar", "APN Toolbar"],
+      "known_install_paths": ["%PROGRAMFILES%\\Ask.com", "%LOCALAPPDATA%\\AskToolbar"],
+      "registry_names": ["Ask Toolbar", "AskBar", "APN Toolbar"],
+      "risk_level": "Medium",
+      "recommended_action": "Remove the toolbar and reset browser defaults if unauthorized."
+    },
+    {
+      "name": "Browser Assistant",
+      "aliases": ["BrowserAssistant", "Realistic Media Browser Assistant"],
+      "known_install_paths": ["%PROGRAMFILES%\\Browser Assistant", "%LOCALAPPDATA%\\BrowserAssistant"],
+      "registry_names": ["Browser Assistant", "BrowserAssistant"],
+      "risk_level": "High",
+      "recommended_action": "Remove the application and associated startup persistence."
+    },
+    {
+      "name": "Chromium Adware Variant",
+      "aliases": ["BoBrowser", "CrossBrowser", "MyBrowser", "Torch Browser", "Amigo Browser", "Kometa Browser"],
+      "known_install_paths": ["%LOCALAPPDATA%\\BoBrowser", "%LOCALAPPDATA%\\CrossBrowser", "%LOCALAPPDATA%\\Amigo", "%LOCALAPPDATA%\\Kometa"],
+      "registry_names": ["BoBrowser", "CrossBrowser", "MyBrowser", "Torch Browser", "Amigo Browser", "Kometa Browser"],
+      "risk_level": "Medium",
+      "recommended_action": "Verify the Chromium build and publisher; remove it if unmanaged or bundled without consent."
+    }
+  ]
+}
